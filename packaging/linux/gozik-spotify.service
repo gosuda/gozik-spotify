@@ -1,0 +1,18 @@
+[Unit]
+Description=gozik Spotify gRPC plugin server
+After=network.target
+
+[Service]
+Type=simple
+Environment=GOZIK_SPOTIFY_PORT=50054
+Environment=GOZIK_SPOTIFY_WEBUI_PORT=50055
+Environment=GOZIK_SPOTIFY_NO_POPUP=1
+ExecStart=%h/.local/share/gozik/spotify/gozik-spotify --port 50054 --web-ui-port 50055 --no-startup-popup --register-desktop-entry never
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+PassEnvironment=DISPLAY XAUTHORITY WAYLAND_DISPLAY
+
+[Install]
+WantedBy=default.target

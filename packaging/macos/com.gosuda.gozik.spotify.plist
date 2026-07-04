@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.gosuda.gozik.spotify</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__BINARY_PATH__</string>
+    <string>--port</string>
+    <string>50054</string>
+    <string>--web-ui-port</string>
+    <string>50055</string>
+    <string>--no-startup-popup</string>
+    <string>--register-desktop-entry</string>
+    <string>never</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__BUNDLE_DIR__:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/gozik-spotify.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/gozik-spotify-err.log</string>
+</dict>
+</plist>

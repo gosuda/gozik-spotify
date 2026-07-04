@@ -22,6 +22,7 @@ USER_LIBDIR       ?= $(USER_PREFIX)/lib
 USER_INSTALL_DIR  ?= $(USER_LIBDIR)/$(BINARY_NAME)
 USER_INSTALL_WRAPPER ?= $(USER_BINDIR)/$(BINARY_NAME)
 SYSTEMD_USER_UNIT_DIR ?= $(HOME)/.config/systemd/user
+PACKAGE_DIR ?= dist/$(BINARY_NAME)
 
 BINARY_NAME := gozik-spotify
 BUILDDIR    := build
@@ -33,9 +34,11 @@ INSTALL_WRAPPER := $(BINDIR)/$(BINARY_NAME)
 
 GOFLAGS ?=
 LDFLAGS ?=
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
 CURL    ?= curl
 
-.PHONY: all build install install-user uninstall uninstall-user clean distclean
+.PHONY: all build package install install-user uninstall uninstall-user clean distclean
 
 # -----------------------------------------------------------------------------
 # Default target
@@ -58,6 +61,15 @@ $(YTDLP_BINARY):
 	$(CURL) -fsSL -o $(YTDLP_BINARY) $(YTDLP_URL)
 	chmod +x $(YTDLP_BINARY)
 	@echo "==> yt-dlp ready at $(YTDLP_BINARY)"
+
+package: build
+	@echo "==> Creating package bundle at $(PACKAGE_DIR) ..."
+	rm -rf $(PACKAGE_DIR)
+	install -d $(PACKAGE_DIR)
+	install -m 0755 $(BUNDLE_BINARY) $(PACKAGE_DIR)/$(BINARY_NAME)$(if $(filter windows,$(GOOS)),.exe)
+	install -m 0755 $(YTDLP_BINARY) $(PACKAGE_DIR)/yt-dlp$(if $(filter windows,$(GOOS)),.exe)
+	cp -R packaging $(PACKAGE_DIR)/
+	@echo "==> Bundle ready at $(PACKAGE_DIR)"
 
 # -----------------------------------------------------------------------------
 # Install binary + systemd system service unit
