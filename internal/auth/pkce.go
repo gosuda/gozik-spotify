@@ -89,6 +89,9 @@ func (f *Flow) AuthURL() string {
 // opaque device_code so CompleteAuth can correlate the result.
 func (f *Flow) DeviceCode() string { return f.verifier }
 
+// ClientID returns the client ID used in this auth flow.
+func (f *Flow) ClientID() string { return f.clientID }
+
 // SetPreferredBrowser hints that the OAuth URL should be opened in the given
 // browser instead of the system default. Used when the user selected a specific
 // browser (e.g. Firefox) for Client ID extraction and expects the auth tab to

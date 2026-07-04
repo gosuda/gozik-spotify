@@ -28,7 +28,7 @@ The Client ID can be supplied in any of these ways:
 
 - `GOZIK_SPOTIFY_MODE` — `hybrid` or `librespot` (default: `hybrid`).
 - `GOZIK_SPOTIFY_HOST` / `GOZIK_SPOTIFY_PORT` — gRPC bind address (default: `127.0.0.1:50054`, chosen to avoid colliding with `gozik-yt-music` on port 50051).
-- `GOZIK_SPOTIFY_WEBUI_PORT` — standalone web UI HTTP port (default: `50053`, set to `0` to disable).
+- `GOZIK_SPOTIFY_WEBUI_PORT` — standalone web UI HTTP port (default: `50055`, set to `0` to disable).
 - `GOZIK_SPOTIFY_REGISTER_DESKTOP` — desktop entry behaviour: `auto`, `always`, `never` (default: `auto`).
 - `GOZIK_SPOTIFY_NO_POPUP` — set to `1`/`true` to disable the startup GUI popup.
 - `GOZIK_SPOTIFY_YTDLP` — path to `yt-dlp` binary (default: system `PATH`, then the `yt-dlp` bundled next to the server binary).
@@ -85,11 +85,11 @@ On first use, call `InitiateAuth` from Gozik settings. The server opens the brow
 
 ## Standalone web UI
 
-Like `gozik-yt-music`, `gozik-spotify` now serves a built-in web dashboard on a separate HTTP port (default `50053`) so you can manage the plugin with any browser, even without the Gozik desktop app:
+Like `gozik-yt-music`, `gozik-spotify` now serves a built-in web dashboard on a separate HTTP port (default `50055`) so you can manage the plugin with any browser, even without the Gozik desktop app:
 
 ```bash
 # Open the dashboard
-xdg-open http://127.0.0.1:50053
+xdg-open http://127.0.0.1:50055
 ```
 
 The dashboard shows the current auth status, capabilities, and a login page. You can either auto-import a Client ID from a local browser (Chrome, Chromium, Firefox, Edge, Brave, Opera, Vivaldi, Whale) or paste your own Spotify Client ID to complete the PKCE flow.
@@ -99,7 +99,7 @@ The dashboard shows the current auth status, capabilities, and a login page. You
 Because it speaks plain HTTP, it also answers `curl`:
 
 ```bash
-curl http://127.0.0.1:50053/api/status
+curl http://127.0.0.1:50055/api/status
 ```
 
 On startup, the server tries to show a small GUI popup (via `zenity`, `notify-send`, or `xmessage` on Linux) and registers an app-menu shortcut for the web UI on supported desktops. Disable these with `--no-startup-popup` and `--register-desktop-entry never` if desired.

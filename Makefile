@@ -85,7 +85,7 @@ install:
 		'[Service]' \
 		'Type=simple' \
 		'Environment=GOZIK_SPOTIFY_PORT=50054' \
-		'Environment=GOZIK_SPOTIFY_WEBUI_PORT=50053' \
+		'Environment=GOZIK_SPOTIFY_WEBUI_PORT=50055' \
 		'ExecStart=$(INSTALL_WRAPPER)' \
 		'Restart=on-failure' \
 		'RestartSec=5' \
@@ -101,9 +101,9 @@ install:
 	@echo "==> Wrapper script installed to $(DESTDIR)$(INSTALL_WRAPPER)"
 	@echo "==> systemd unit installed to $(DESTDIR)$(SYSTEMD_SYSTEM_UNIT_DIR)/$(BINARY_NAME).service"
 	@echo ""
-	@echo "    Start now : sudo systemctl daemon-reload"
-	@echo "                sudo systemctl enable --now $(BINARY_NAME).service"
-	@echo "    Status    : sudo systemctl status $(BINARY_NAME).service"
+	@echo "    Start now : systemctl daemon-reload --user"
+	@echo "                systemctl enable --user --now $(BINARY_NAME).service"
+	@echo "    Status    : sudo systemctl status --user $(BINARY_NAME).service"
 
 # -----------------------------------------------------------------------------
 # User-level install (no sudo)
@@ -131,7 +131,7 @@ install-user:
 		'[Service]' \
 		'Type=simple' \
 		'Environment=GOZIK_SPOTIFY_PORT=50054' \
-		'Environment=GOZIK_SPOTIFY_WEBUI_PORT=50053' \
+		'Environment=GOZIK_SPOTIFY_WEBUI_PORT=50055' \
 		'ExecStart=$(USER_INSTALL_WRAPPER)' \
 		'Restart=on-failure' \
 		'RestartSec=5' \

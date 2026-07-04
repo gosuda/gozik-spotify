@@ -23,7 +23,7 @@ import (
 
 const (
 	// DefaultPort is the default HTTP port for the standalone web UI.
-	DefaultPort = 50053
+	DefaultPort = 50055
 )
 
 // MusicProvider is the subset of the gRPC servicer that the web UI needs.

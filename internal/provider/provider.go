@@ -28,7 +28,7 @@ var fallbackClientID string
 const (
 	providerID   = "spotify"
 	displayName  = "Spotify"
-	defaultLimit = 20
+	defaultLimit = 10
 )
 
 // MusicProviderServicer implements music.v1.MusicProviderService.
@@ -209,7 +209,16 @@ func (s *MusicProviderServicer) CompleteAuth(ctx context.Context, _ *musicv1.Com
 	s.mu.Lock()
 	s.tokens = ts
 	s.client = spotify.NewClient(ts.AccessToken)
+	if flow.ClientID() != "" {
+		s.clientID = flow.ClientID()
+	}
 	s.mu.Unlock()
+
+	if flow.ClientID() != "" {
+		if err := config.SaveSettings(&config.ProviderSettings{ClientID: flow.ClientID()}); err != nil {
+			log.Printf("CompleteAuth: failed to save client id to settings: %v", err)
+		}
+	}
 
 	// Verify the authenticated account and log the subscription tier so
 	// "premium required" problems are easier to diagnose.

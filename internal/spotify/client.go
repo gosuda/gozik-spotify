@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -38,19 +39,60 @@ func (c *Client) request(ctx context.Context, method, path string, params url.Va
 	if len(params) > 0 {
 		u += "?" + params.Encode()
 	}
-	req, err := http.NewRequestWithContext(ctx, method, u, body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+c.accessToken)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+
+	const maxRetries = 3
+	var resp *http.Response
+	var err error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		var req *http.Request
+		req, err = http.NewRequestWithContext(ctx, method, u, body)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
+		resp, err = c.http.Do(req)
+		if err != nil {
+			if attempt < maxRetries {
+				select {
+				case <-time.After(time.Duration(attempt+1) * 200 * time.Millisecond):
+					continue
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+			return fmt.Errorf("spotify request: %w", err)
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			if attempt < maxRetries {
+				retryAfterSec := 2
+				if retryHeader := resp.Header.Get("Retry-After"); retryHeader != "" {
+					if seconds, parseErr := strconv.Atoi(retryHeader); parseErr == nil && seconds > 0 {
+						retryAfterSec = seconds
+					}
+				}
+				log.Printf("Spotify API rate limit (429) hit. Waiting for %d seconds before retrying...", retryAfterSec)
+				select {
+				case <-time.After(time.Duration(retryAfterSec) * time.Second):
+					continue
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		}
+		break
 	}
 
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("spotify request: %w", err)
-	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -72,7 +114,10 @@ func (c *Client) request(ctx context.Context, method, path string, params url.Va
 func (c *Client) Search(ctx context.Context, query string, types []string, limit, offset int) (SearchResult, error) {
 	var result SearchResult
 	if limit <= 0 {
-		limit = 20
+		limit = 10
+	}
+	if limit > 10 {
+		limit = 10
 	}
 	params := url.Values{}
 	params.Set("q", query)
@@ -108,9 +153,19 @@ func (c *Client) GetPlaylistTracks(ctx context.Context, id string, limit int) ([
 	if limit <= 0 {
 		limit = 100
 	}
+	if limit > 500 {
+		limit = 500
+	}
 	var tracks []Track
 	offset := 0
 	for len(tracks) < limit {
+		if offset > 0 {
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
 		params := url.Values{}
 		params.Set("limit", strconv.Itoa(min(50, limit-len(tracks))))
 		params.Set("offset", strconv.Itoa(offset))
@@ -138,9 +193,19 @@ func (c *Client) GetUserPlaylists(ctx context.Context, limit int) ([]Playlist, e
 	if limit <= 0 {
 		limit = 50
 	}
+	if limit > 100 {
+		limit = 100
+	}
 	var out []Playlist
 	offset := 0
 	for len(out) < limit {
+		if offset > 0 {
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
 		params := url.Values{}
 		params.Set("limit", strconv.Itoa(min(50, limit-len(out))))
 		params.Set("offset", strconv.Itoa(offset))
@@ -171,9 +236,19 @@ func (c *Client) GetUserLibrary(ctx context.Context, limit int) ([]Track, error)
 	if limit <= 0 {
 		limit = 50
 	}
+	if limit > 300 {
+		limit = 300
+	}
 	var out []Track
 	offset := 0
 	for len(out) < limit {
+		if offset > 0 {
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
 		params := url.Values{}
 		params.Set("limit", strconv.Itoa(min(50, limit-len(out))))
 		params.Set("offset", strconv.Itoa(offset))

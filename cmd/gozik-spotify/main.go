@@ -24,7 +24,7 @@ import (
 const (
 	defaultHost      = "127.0.0.1"
 	defaultPort      = 50054 // intentionally not 50051 so it never collides with gozik-yt-music
-	defaultWebUIPort = 50053 // intentionally not 50052 so it never collides with gozik-yt-music web UI
+	defaultWebUIPort = 50055 // intentionally not 50052 so it never collides with gozik-yt-music web UI
 )
 
 func main() {
