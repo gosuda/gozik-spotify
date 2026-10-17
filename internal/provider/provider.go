@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -73,7 +74,39 @@ func New() (*MusicProviderServicer, error) {
 	return s, nil
 }
 
+// ensureTokens backfills the in-memory token state from disk when no tokens
+// are loaded. The PKCE callback persists tokens to disk before gozik ever
+// calls CompleteAuth, and that call can be missed or time out client-side;
+// without this reload the service would keep reporting UNAUTHENTICATED (and
+// rejecting searches) until the next process restart.
+func (s *MusicProviderServicer) ensureTokens() {
+	s.mu.RLock()
+	has := s.tokens != nil && s.tokens.AccessToken != ""
+	s.mu.RUnlock()
+	if has {
+		return
+	}
+
+	ts, err := config.LoadTokens()
+	if err != nil {
+		log.Printf("ensureTokens: failed to load tokens: %v", err)
+		return
+	}
+	if ts == nil || ts.AccessToken == "" {
+		return
+	}
+
+	s.mu.Lock()
+	if s.tokens == nil || s.tokens.AccessToken == "" {
+		s.tokens = ts
+		s.client = spotify.NewClient(ts.AccessToken)
+	}
+	s.mu.Unlock()
+}
+
 func (s *MusicProviderServicer) authStatus() musicv1.AuthStatus {
+	s.ensureTokens()
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.tokens == nil || s.tokens.AccessToken == "" {
@@ -194,7 +227,6 @@ func (s *MusicProviderServicer) InitiateAuth(ctx context.Context, req *musicv1.I
 func (s *MusicProviderServicer) CompleteAuth(ctx context.Context, _ *musicv1.CompleteAuthRequest) (*musicv1.CompleteAuthResponse, error) {
 	s.mu.Lock()
 	flow := s.pending
-	s.pending = nil
 	s.mu.Unlock()
 
 	if flow == nil {
@@ -203,10 +235,25 @@ func (s *MusicProviderServicer) CompleteAuth(ctx context.Context, _ *musicv1.Com
 
 	ts, err := flow.Result(ctx)
 	if err != nil {
+		// Keep the pending flow when the failure is only a client-side timeout:
+		// the browser callback may still arrive, and Flow.Result is idempotent
+		// once it has been processed, so a retry can still succeed. Only a
+		// definitive flow failure (state mismatch, Spotify error, denied
+		// consent) invalidates the pending flow.
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+			s.mu.Lock()
+			if s.pending == flow {
+				s.pending = nil
+			}
+			s.mu.Unlock()
+		}
 		return nil, status.Errorf(codes.Unauthenticated, "authentication failed: %v", err)
 	}
 
 	s.mu.Lock()
+	if s.pending == flow {
+		s.pending = nil
+	}
 	s.tokens = ts
 	s.client = spotify.NewClient(ts.AccessToken)
 	if flow.ClientID() != "" {
@@ -558,6 +605,8 @@ func (s *MusicProviderServicer) searchTypes(types []musicv1.MediaType) []string 
 }
 
 func (s *MusicProviderServicer) apiClient(ctx context.Context) (*spotify.Client, error) {
+	s.ensureTokens()
+
 	s.mu.RLock()
 	client := s.client
 	tokens := s.tokens
